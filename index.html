@@ -133,7 +133,7 @@
         .checkbox-group {
             display: flex;
             align-items: center;
-            margin: 10px 0;
+            margin: 5px 0;
             gap: 8px;
         }
         
@@ -175,6 +175,7 @@
             padding: 8px 12px;
             border-radius: 5px;
             border: 1px solid #ddd;
+            width: 100px;
         }
         
         #previewFrame {
@@ -200,8 +201,8 @@
         <textarea id="codeInput" placeholder="여기에 HTML/CSS 코드를 입력하세요..."></textarea>
         
         <div class="button-group">
-            <button onclick="generatePopup()" class="btn-run">
-                <i class="fas fa-external-link-alt"></i> 새 창에서 실행
+            <button onclick="runCode()" class="btn-run">
+                <i class="fas fa-play"></i> 테스트
             </button>
             <button onclick="previewInPage()" class="btn-preview">
                 <i class="fas fa-eye"></i> 미리보기
@@ -213,7 +214,7 @@
         
         <div class="button-group">
             <button onclick="copyCode()" class="btn-copy">
-                <i class="far fa-copy"></i> 코드 복사
+                <i class="far fa-copy"></i> HTML 코드 복사
             </button>
             <button onclick="exportToTxt()" class="btn-save">
                 <i class="fas fa-file-export"></i> 파일 저장
@@ -228,12 +229,19 @@
         
         <div class="settings-group">
             <div class="settings-title"><i class="fas fa-cog"></i> 설정</div>
+            
             <div class="checkbox-group">
                 <input type="checkbox" id="clearAfterCopy">
                 <label for="clearAfterCopy">복사 후 HTML 코드 비우기</label>
             </div>
+            
             <div class="checkbox-group">
-                <label for="autoSaveInterval">HTML 코드 자동 저장:</label>
+                <input type="checkbox" id="openInWindow">
+                <label for="openInWindow">테스트 팝업으로 열기</label>
+            </div>
+            
+            <div class="checkbox-group" style="margin-top:10px;">
+                <label for="autoSaveInterval">자동 저장 주기:</label>
                 <select id="autoSaveInterval">
                     <option value="0" selected>사용 안함</option>
                     <option value="5">5초</option>
@@ -256,7 +264,7 @@
     </div>
     
     <div class="footer">
-        v1.0 - 실행한 코드는 브라우저에 자동으로 저장됩니다.
+        v1.5 - 실행한 HTML 코드는 브라우저에 자동으로 저장됩니다.
     </div>
 
     <script>
@@ -266,7 +274,7 @@
         
         // DOM 로드 완료 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            // 저장된 코드 복원
+            // 저장된 HTML 코드 복원
             const savedCode = localStorage.getItem("savedCode");
             if (savedCode) {
                 document.getElementById("codeInput").value = savedCode;
@@ -276,6 +284,9 @@
             // 설정 복원
             document.getElementById("clearAfterCopy").checked = 
                 localStorage.getItem("clearAfterCopy") === 'true';
+                
+            document.getElementById("openInWindow").checked =
+                localStorage.getItem("openInWindow") === 'true';
             
             const savedInterval = localStorage.getItem("autoSaveInterval") || "0";
             document.getElementById("autoSaveInterval").value = savedInterval;
@@ -295,7 +306,58 @@
             document.getElementById('clearAfterCopy').addEventListener('change', function() {
                 localStorage.setItem("clearAfterCopy", this.checked.toString());
             });
+            
+            document.getElementById('openInWindow').addEventListener('change', function() {
+                localStorage.setItem("openInWindow", this.checked.toString());
+            });
         });
+        
+        // HTML 코드 실행 (설정에 따라 새 탭 또는 새 창)
+        function runCode() {
+            const code = document.getElementById("codeInput").value;
+            saveCode();
+            
+            const useWindow = document.getElementById("openInWindow").checked;
+            const features = "width=800,height=600,menubar=no,toolbar=no,location=no";
+            
+            if (useWindow) {
+                const newWindow = window.open("", "_blank", features);
+                newWindow.document.open();
+                newWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>HTML 코드 테스트 결과</title>
+                        <style>
+                            body { margin: 20px; font-family: Arial, sans-serif; }
+                        </style>
+                    </head>
+                    <body>
+                        ${code}
+                    </body>
+                    </html>
+                `);
+                newWindow.document.close();
+            } else {
+                const newTab = window.open('about:blank', '_blank');
+                newTab.document.open();
+                newTab.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>HTML 코드 테스트 결과</title>
+                        <style>
+                            body { margin: 20px; font-family: Arial, sans-serif; }
+                        </style>
+                    </head>
+                    <body>
+                        ${code}
+                    </body>
+                    </html>
+                `);
+                newTab.document.close();
+            }
+        }
         
         // 변경된 내용이 있을 때만 저장
         function saveCodeIfChanged() {
@@ -323,19 +385,11 @@
             }
         }
         
-        // 코드 저장 (내용 비교 없이 무조건 저장)
+        // HTML 코드 저장 (내용 비교 없이 무조건 저장)
         function saveCode() {
             const code = document.getElementById("codeInput").value;
             localStorage.setItem("savedCode", code);
             lastSavedContent = code;
-        }
-        
-        // 새 창에서 코드 실행
-        function generatePopup() {
-            const code = document.getElementById("codeInput").value;
-            saveCode();
-            const popupWindow = window.open("", "_blank", "width=600,height=400");
-            popupWindow.document.write(code);
         }
         
         // 현재 페이지에서 미리보기 (iframe 사용)
@@ -353,7 +407,7 @@
             document.getElementById("previewContainer").style.display = "none";
         }
         
-        // 코드를 TXT 파일로 저장
+        // HTML 코드를 TXT 파일로 저장
         function exportToTxt() {
             const code = document.getElementById("codeInput").value;
             const blob = new Blob([code], { type: 'text/plain' });
@@ -367,13 +421,13 @@
             URL.revokeObjectURL(url);
         }
         
-        // 코드 복사 기능
+        // HTML 코드 복사 기능
         function copyCode() {
             const codeInput = document.getElementById("codeInput");
             codeInput.select();
             document.execCommand('copy');
             
-            showNotification('코드가 클립보드에 복사되었습니다!');
+            showNotification('HTML 코드가 클립보드에 복사되었습니다!');
             
             if (document.getElementById("clearAfterCopy").checked) {
                 codeInput.value = "";
@@ -382,17 +436,17 @@
             }
         }
         
-        // 코드 지우기
+        // HTML 코드 지우기
         function clearCode() {
-            if (confirm("정말 코드를 지우시겠습니까?")) {
+            if (confirm("정말 HTML 코드를 지우시겠습니까?")) {
                 document.getElementById("codeInput").value = "";
                 localStorage.removeItem("savedCode");
                 lastSavedContent = "";
-                showNotification('코드가 지워졌습니다');
+                showNotification('HTML 코드가 지워졌습니다');
             }
         }
         
-        // 코드 포맷팅 (Prettier 사용)
+        // HTML 코드 포맷팅 (Prettier 사용)
         function formatCode() {
             const codeInput = document.getElementById("codeInput");
             try {
@@ -405,7 +459,7 @@
                 });
                 codeInput.value = formattedCode;
                 saveCode();
-                showNotification('코드가 포맷팅되었습니다');
+                showNotification('HTML 코드가 포맷팅되었습니다');
             } catch (error) {
                 showNotification('포맷팅 실패: ' + error.message, true);
             }
